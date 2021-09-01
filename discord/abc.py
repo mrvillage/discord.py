@@ -56,15 +56,15 @@ from .sticker import GuildSticker, StickerItem
 from . import utils
 
 __all__ = (
-    'Snowflake',
-    'User',
-    'PrivateChannel',
-    'GuildChannel',
-    'Messageable',
-    'Connectable',
+    "Snowflake",
+    "User",
+    "PrivateChannel",
+    "GuildChannel",
+    "Messageable",
+    "Connectable",
 )
 
-T = TypeVar('T', bound=VoiceProtocol)
+T = TypeVar("T", bound=VoiceProtocol)
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -89,7 +89,9 @@ if TYPE_CHECKING:
         OverwriteType,
     )
 
-    PartialMessageableChannel = Union[TextChannel, Thread, DMChannel, PartialMessageable]
+    PartialMessageableChannel = Union[
+        TextChannel, Thread, DMChannel, PartialMessageable
+    ]
     MessageableChannel = Union[PartialMessageableChannel, GroupChannel]
     SnowflakeTime = Union["Snowflake", datetime]
 
@@ -98,7 +100,7 @@ MISSING = utils.MISSING
 
 class _Undefined:
     def __repr__(self) -> str:
-        return 'see-below'
+        return "see-below"
 
 
 _undefined: Any = _Undefined()
@@ -189,23 +191,23 @@ class PrivateChannel(Snowflake, Protocol):
 
 
 class _Overwrites:
-    __slots__ = ('id', 'allow', 'deny', 'type')
+    __slots__ = ("id", "allow", "deny", "type")
 
     ROLE = 0
     MEMBER = 1
 
     def __init__(self, data: PermissionOverwritePayload):
-        self.id: int = int(data['id'])
-        self.allow: int = int(data.get('allow', 0))
-        self.deny: int = int(data.get('deny', 0))
-        self.type: OverwriteType = data['type']
+        self.id: int = int(data["id"])
+        self.allow: int = int(data.get("allow", 0))
+        self.deny: int = int(data.get("deny", 0))
+        self.type: OverwriteType = data["type"]
 
     def _asdict(self) -> PermissionOverwritePayload:
         return {
-            'id': self.id,
-            'allow': str(self.allow),
-            'deny': str(self.deny),
-            'type': self.type,
+            "id": self.id,
+            "allow": str(self.allow),
+            "deny": str(self.deny),
+            "type": self.type,
         }
 
     def is_role(self) -> bool:
@@ -215,7 +217,7 @@ class _Overwrites:
         return self.type == 1
 
 
-GCH = TypeVar('GCH', bound='GuildChannel')
+GCH = TypeVar("GCH", bound="GuildChannel")
 
 
 class GuildChannel:
@@ -254,7 +256,9 @@ class GuildChannel:
 
     if TYPE_CHECKING:
 
-        def __init__(self, *, state: ConnectionState, guild: Guild, data: Dict[str, Any]):
+        def __init__(
+            self, *, state: ConnectionState, guild: Guild, data: Dict[str, Any]
+        ):
             ...
 
     def __str__(self) -> str:
@@ -276,11 +280,13 @@ class GuildChannel:
         reason: Optional[str],
     ) -> None:
         if position < 0:
-            raise InvalidArgument('Channel position cannot be less than 0.')
+            raise InvalidArgument("Channel position cannot be less than 0.")
 
         http = self._state.http
         bucket = self._sorting_bucket
-        channels: List[GuildChannel] = [c for c in self.guild.channels if c._sorting_bucket == bucket]
+        channels: List[GuildChannel] = [
+            c for c in self.guild.channels if c._sorting_bucket == bucket
+        ]
 
         channels.sort(key=lambda c: c.position)
 
@@ -291,106 +297,124 @@ class GuildChannel:
             # not there somehow lol
             return
         else:
-            index = next((i for i, c in enumerate(channels) if c.position >= position), len(channels))
+            index = next(
+                (i for i, c in enumerate(channels) if c.position >= position),
+                len(channels),
+            )
             # add ourselves at our designated position
             channels.insert(index, self)
 
         payload = []
         for index, c in enumerate(channels):
-            d: Dict[str, Any] = {'id': c.id, 'position': index}
+            d: Dict[str, Any] = {"id": c.id, "position": index}
             if parent_id is not _undefined and c.id == self.id:
                 d.update(parent_id=parent_id, lock_permissions=lock_permissions)
             payload.append(d)
 
         await http.bulk_channel_update(self.guild.id, payload, reason=reason)
 
-    async def _edit(self, options: Dict[str, Any], reason: Optional[str]) -> Optional[ChannelPayload]:
+    async def _edit(
+        self, options: Dict[str, Any], reason: Optional[str]
+    ) -> Optional[ChannelPayload]:
         try:
-            parent = options.pop('category')
+            parent = options.pop("category")
         except KeyError:
             parent_id = _undefined
         else:
             parent_id = parent and parent.id
 
         try:
-            options['rate_limit_per_user'] = options.pop('slowmode_delay')
+            options["rate_limit_per_user"] = options.pop("slowmode_delay")
         except KeyError:
             pass
 
         try:
-            rtc_region = options.pop('rtc_region')
-        except KeyError:
-            pass
-        else:
-            options['rtc_region'] = None if rtc_region is None else str(rtc_region)
-
-        try:
-            video_quality_mode = options.pop('video_quality_mode')
+            rtc_region = options.pop("rtc_region")
         except KeyError:
             pass
         else:
-            options['video_quality_mode'] = int(video_quality_mode)
-
-        lock_permissions = options.pop('sync_permissions', False)
+            options["rtc_region"] = None if rtc_region is None else str(rtc_region)
 
         try:
-            position = options.pop('position')
+            video_quality_mode = options.pop("video_quality_mode")
+        except KeyError:
+            pass
+        else:
+            options["video_quality_mode"] = int(video_quality_mode)
+
+        lock_permissions = options.pop("sync_permissions", False)
+
+        try:
+            position = options.pop("position")
         except KeyError:
             if parent_id is not _undefined:
                 if lock_permissions:
                     category = self.guild.get_channel(parent_id)
                     if category:
-                        options['permission_overwrites'] = [c._asdict() for c in category._overwrites]
-                options['parent_id'] = parent_id
+                        options["permission_overwrites"] = [
+                            c._asdict() for c in category._overwrites
+                        ]
+                options["parent_id"] = parent_id
             elif lock_permissions and self.category_id is not None:
                 # if we're syncing permissions on a pre-existing channel category without changing it
                 # we need to update the permissions to point to the pre-existing category
                 category = self.guild.get_channel(self.category_id)
                 if category:
-                    options['permission_overwrites'] = [c._asdict() for c in category._overwrites]
+                    options["permission_overwrites"] = [
+                        c._asdict() for c in category._overwrites
+                    ]
         else:
-            await self._move(position, parent_id=parent_id, lock_permissions=lock_permissions, reason=reason)
+            await self._move(
+                position,
+                parent_id=parent_id,
+                lock_permissions=lock_permissions,
+                reason=reason,
+            )
 
-        overwrites = options.get('overwrites', None)
+        overwrites = options.get("overwrites", None)
         if overwrites is not None:
             perms = []
             for target, perm in overwrites.items():
                 if not isinstance(perm, PermissionOverwrite):
-                    raise InvalidArgument(f'Expected PermissionOverwrite received {perm.__class__.__name__}')
+                    raise InvalidArgument(
+                        f"Expected PermissionOverwrite received {perm.__class__.__name__}"
+                    )
 
                 allow, deny = perm.pair()
                 payload = {
-                    'allow': allow.value,
-                    'deny': deny.value,
-                    'id': target.id,
+                    "allow": allow.value,
+                    "deny": deny.value,
+                    "id": target.id,
                 }
 
                 if isinstance(target, Role):
-                    payload['type'] = _Overwrites.ROLE
+                    payload["type"] = _Overwrites.ROLE
                 else:
-                    payload['type'] = _Overwrites.MEMBER
+                    payload["type"] = _Overwrites.MEMBER
 
                 perms.append(payload)
-            options['permission_overwrites'] = perms
+            options["permission_overwrites"] = perms
 
         try:
-            ch_type = options['type']
+            ch_type = options["type"]
         except KeyError:
             pass
         else:
             if not isinstance(ch_type, ChannelType):
-                raise InvalidArgument('type field must be of type ChannelType')
-            options['type'] = ch_type.value
+                raise InvalidArgument("type field must be of type ChannelType")
+            options["type"] = ch_type.value
 
         if options:
-            return await self._state.http.edit_channel(self.id, reason=reason, **options)
+            return await self._state.http.edit_channel(
+                self.id, reason=reason, **options
+            )
 
     def _fill_overwrites(self, data: GuildChannelPayload) -> None:
         self._overwrites = []
         everyone_index = 0
         everyone_id = self.guild.id
 
-        for index, overridden in enumerate(data.get('permission_overwrites', [])):
+        for index, overridden in enumerate(data.get("permission_overwrites", [])):
             overwrite = _Overwrites(overridden)
             self._overwrites.append(overwrite)
 
@@ -429,7 +453,7 @@ class GuildChannel:
     @property
     def mention(self) -> str:
         """:class:`str`: The string that allows you to mention the channel."""
-        return f'<#{self.id}>'
+        return f"<#{self.id}>"
 
     @property
     def created_at(self) -> datetime:
@@ -589,7 +613,9 @@ class GuildChannel:
             try:
                 maybe_everyone = self._overwrites[0]
                 if maybe_everyone.id == self.guild.id:
-                    base.handle_overwrite(allow=maybe_everyone.allow, deny=maybe_everyone.deny)
+                    base.handle_overwrite(
+                        allow=maybe_everyone.allow, deny=maybe_everyone.deny
+                    )
             except IndexError:
                 pass
 
@@ -620,7 +646,9 @@ class GuildChannel:
         try:
             maybe_everyone = self._overwrites[0]
             if maybe_everyone.id == self.guild.id:
-                base.handle_overwrite(allow=maybe_everyone.allow, deny=maybe_everyone.deny)
+                base.handle_overwrite(
+                    allow=maybe_everyone.allow, deny=maybe_everyone.deny
+                )
                 remaining_overwrites = self._overwrites[1:]
             else:
                 remaining_overwrites = self._overwrites
@@ -703,7 +731,9 @@ class GuildChannel:
     ) -> None:
         ...
 
-    async def set_permissions(self, target, *, overwrite=_undefined, reason=None, **permissions):
+    async def set_permissions(
+        self, target, *, overwrite=_undefined, reason=None, **permissions
+    ):
         r"""|coro|
 
         Sets the channel specific permission overwrites for a target in the
@@ -779,18 +809,18 @@ class GuildChannel:
         elif isinstance(target, Role):
             perm_type = _Overwrites.ROLE
         else:
-            raise InvalidArgument('target parameter must be either Member or Role')
+            raise InvalidArgument("target parameter must be either Member or Role")
 
         if overwrite is _undefined:
             if len(permissions) == 0:
-                raise InvalidArgument('No overwrite provided.')
+                raise InvalidArgument("No overwrite provided.")
             try:
                 overwrite = PermissionOverwrite(**permissions)
             except (ValueError, TypeError):
-                raise InvalidArgument('Invalid permissions given to keyword arguments.')
+                raise InvalidArgument("Invalid permissions given to keyword arguments.")
         else:
             if len(permissions) > 0:
-                raise InvalidArgument('Cannot mix overwrite and keyword arguments.')
+                raise InvalidArgument("Cannot mix overwrite and keyword arguments.")
 
         # TODO: wait for event
 
@@ -798,9 +828,11 @@ class GuildChannel:
             await http.delete_channel_permissions(self.id, target.id, reason=reason)
         elif isinstance(overwrite, PermissionOverwrite):
             (allow, deny) = overwrite.pair()
-            await http.edit_channel_permissions(self.id, target.id, allow.value, deny.value, perm_type, reason=reason)
+            await http.edit_channel_permissions(
+                self.id, target.id, allow.value, deny.value, perm_type, reason=reason
+            )
         else:
-            raise InvalidArgument('Invalid overwrite type provided.')
+            raise InvalidArgument("Invalid overwrite type provided.")
 
     async def _clone_impl(
         self: GCH,
@@ -809,19 +841,23 @@ class GuildChannel:
         name: Optional[str] = None,
         reason: Optional[str] = None,
     ) -> GCH:
-        base_attrs['permission_overwrites'] = [x._asdict() for x in self._overwrites]
-        base_attrs['parent_id'] = self.category_id
-        base_attrs['name'] = name or self.name
+        base_attrs["permission_overwrites"] = [x._asdict() for x in self._overwrites]
+        base_attrs["parent_id"] = self.category_id
+        base_attrs["name"] = name or self.name
         guild_id = self.guild.id
         cls = self.__class__
-        data = await self._state.http.create_channel(guild_id, self.type.value, reason=reason, **base_attrs)
+        data = await self._state.http.create_channel(
+            guild_id, self.type.value, reason=reason, **base_attrs
+        )
         obj = cls(state=self._state, guild=self.guild, data=data)
 
         # temporarily add it to the cache
         self.guild._channels[obj.id] = obj  # type: ignore
         return obj
 
-    async def clone(self: GCH, *, name: Optional[str] = None, reason: Optional[str] = None) -> GCH:
+    async def clone(
+        self: GCH, *, name: Optional[str] = None, reason: Optional[str] = None
+    ) -> GCH:
         """|coro|
 
         Clones this channel. This creates a channel with the same properties
@@ -964,14 +1000,16 @@ class GuildChannel:
         if not kwargs:
             return
 
-        beginning, end = kwargs.get('beginning'), kwargs.get('end')
-        before, after = kwargs.get('before'), kwargs.get('after')
-        offset = kwargs.get('offset', 0)
+        beginning, end = kwargs.get("beginning"), kwargs.get("end")
+        before, after = kwargs.get("before"), kwargs.get("after")
+        offset = kwargs.get("offset", 0)
         if sum(bool(a) for a in (beginning, end, before, after)) > 1:
-            raise InvalidArgument('Only one of [before, after, end, beginning] can be used.')
+            raise InvalidArgument(
+                "Only one of [before, after, end, beginning] can be used."
+            )
 
         bucket = self._sorting_bucket
-        parent_id = kwargs.get('category', MISSING)
+        parent_id = kwargs.get("category", MISSING)
         # fmt: off
         channels: List[GuildChannel]
         if parent_id not in (MISSING, None):
@@ -1008,22 +1046,26 @@ class GuildChannel:
         elif before:
             index = next((i for i, c in enumerate(channels) if c.id == before.id), None)
         elif after:
-            index = next((i + 1 for i, c in enumerate(channels) if c.id == after.id), None)
+            index = next(
+                (i + 1 for i, c in enumerate(channels) if c.id == after.id), None
+            )
 
         if index is None:
-            raise InvalidArgument('Could not resolve appropriate move position')
+            raise InvalidArgument("Could not resolve appropriate move position")
 
         channels.insert(max((index + offset), 0), self)
         payload = []
-        lock_permissions = kwargs.get('sync_permissions', False)
-        reason = kwargs.get('reason')
+        lock_permissions = kwargs.get("sync_permissions", False)
+        reason = kwargs.get("reason")
         for index, channel in enumerate(channels):
-            d = {'id': channel.id, 'position': index}
+            d = {"id": channel.id, "position": index}
             if parent_id is not MISSING and channel.id == self.id:
                 d.update(parent_id=parent_id, lock_permissions=lock_permissions)
             payload.append(d)
 
-        await self._state.http.bulk_channel_update(self.guild.id, payload, reason=reason)
+        await self._state.http.bulk_channel_update(
+            self.guild.id, payload, reason=reason
+        )
 
     async def create_invite(
         self,
@@ -1126,7 +1168,10 @@ class GuildChannel:
         state = self._state
         data = await state.http.invites_from_channel(self.id)
         guild = self.guild
-        return [Invite(state=state, data=invite, channel=self, guild=guild) for invite in data]
+        return [
+            Invite(state=state, data=invite, channel=self, guild=guild)
+            for invite in data
+        ]
 
 
 class Messageable:
@@ -1223,20 +1268,20 @@ class Messageable:
 
     async def send(
         self,
-        content=None,
+        content: Optional[str] = MISSING,
         *,
-        tts=None,
-        embed=None,
-        embeds=None,
-        file=None,
-        files=None,
-        stickers=None,
-        delete_after=None,
-        nonce=None,
-        allowed_mentions=None,
-        reference=None,
-        mention_author=None,
-        view=None,
+        tts: bool = MISSING,
+        embed: Embed = MISSING,
+        embeds: List[Embed] = MISSING,
+        file: File = MISSING,
+        files: List[File] = MISSING,
+        stickers: Sequence[Union[GuildSticker, StickerItem]] = MISSING,
+        delete_after: float = MISSING,
+        nonce: int = MISSING,
+        allowed_mentions: AllowedMentions = MISSING,
+        reference: Union[Message, MessageReference, PartialMessage] = MISSING,
+        mention_author: Optional[bool] = MISSING,
+        view: View = MISSING,
     ):
         """|coro|
 
@@ -1326,80 +1371,98 @@ class Messageable:
         :class:`~discord.Message`
             The message that was sent.
         """
-
+        # the type: ignore's are from it not being worth the time to
+        # resolve declared typing issues with function signature
         channel = await self._get_channel()
         state = self._state
-        content = str(content) if content is not None else None
+        if content is not MISSING:
+            content = content and str(content)
 
-        if embed is not None and embeds is not None:
-            raise InvalidArgument('cannot pass both embed and embeds parameter to send()')
+        if embed is not MISSING and embeds is not MISSING:
+            raise InvalidArgument(
+                "cannot pass both embed and embeds parameter to send()"
+            )
 
-        if embed is not None:
-            embed = embed.to_dict()
+        if embed is not MISSING:
+            embed = embed.to_dict()  # type: ignore
 
-        elif embeds is not None:
+        elif embeds is not MISSING:
             if len(embeds) > 10:
-                raise InvalidArgument('embeds parameter must be a list of up to 10 elements')
-            embeds = [embed.to_dict() for embed in embeds]
+                raise InvalidArgument(
+                    "embeds parameter must be a list of up to 10 elements"
+                )
+            embeds = [embed.to_dict() for embed in embeds]  # type: ignore
 
-        if stickers is not None:
-            stickers = [sticker.id for sticker in stickers]
+        if stickers is not MISSING:
+            stickers = [sticker.id for sticker in stickers]  # type: ignore
 
-        if allowed_mentions is not None:
+        if allowed_mentions:
             if state.allowed_mentions is not None:
-                allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
+                allowed_mentions = state.allowed_mentions.merge(  # type: ignore
+                    allowed_mentions
+                ).to_dict()
             else:
-                allowed_mentions = allowed_mentions.to_dict()
+                allowed_mentions = allowed_mentions.to_dict()  # type: ignore
         else:
-            allowed_mentions = state.allowed_mentions and state.allowed_mentions.to_dict()
+            allowed_mentions = (
+                state.allowed_mentions and state.allowed_mentions.to_dict()  # type: ignore
+            )
 
-        if mention_author is not None:
+        if mention_author is not MISSING:
             allowed_mentions = allowed_mentions or AllowedMentions().to_dict()
-            allowed_mentions['replied_user'] = bool(mention_author)
+            allowed_mentions["replied_user"] = bool(mention_author)  # type: ignore
 
-        if reference is not None:
+        if reference is not MISSING:
             try:
-                reference = reference.to_message_reference_dict()
+                reference = reference.to_message_reference_dict()  # type: ignore
             except AttributeError:
-                raise InvalidArgument('reference parameter must be Message, MessageReference, or PartialMessage') from None
+                raise InvalidArgument(
+                    "reference parameter must be Message, MessageReference, or PartialMessage"
+                ) from None
 
         if view:
-            if not hasattr(view, '__discord_ui_view__'):
-                raise InvalidArgument(f'view parameter must be View not {view.__class__!r}')
+            if not hasattr(view, "__discord_ui_view__"):
+                raise InvalidArgument(
+                    f"view parameter must be View not {view.__class__!r}"
+                )
 
             components = view.to_components()
         else:
             components = None
 
-        if file is not None and files is not None:
-            raise InvalidArgument('cannot pass both file and files parameter to send()')
+        if file is not MISSING and files is not MISSING:
+            raise InvalidArgument("cannot pass both file and files parameter to send()")
 
-        if file is not None:
+        # why were the send parameters typed as the classes
+        # when they need to be dicts?
+        if file is not MISSING:
             if not isinstance(file, File):
-                raise InvalidArgument('file parameter must be File')
+                raise InvalidArgument("file parameter must be File")
 
             try:
                 data = await state.http.send_files(
                     channel.id,
                     files=[file],
-                    allowed_mentions=allowed_mentions,
+                    allowed_mentions=allowed_mentions,  # type: ignore
                     content=content,
                     tts=tts,
-                    embed=embed,
-                    embeds=embeds,
-                    nonce=nonce,
-                    message_reference=reference,
-                    stickers=stickers,
-                    components=components,
+                    embed=embed,  # type: ignore
+                    embeds=embeds,  # type: ignore
+                    nonce=nonce,  # type: ignore
+                    message_reference=reference,  # type: ignore
+                    stickers=stickers,  # type: ignore
+                    components=components,  # type: ignore
                 )
             finally:
                 file.close()
 
-        elif files is not None:
+        elif files is not MISSING:
             if len(files) > 10:
-                raise InvalidArgument('files parameter must be a list of up to 10 elements')
+                raise InvalidArgument(
+                    "files parameter must be a list of up to 10 elements"
+                )
             elif not all(isinstance(file, File) for file in files):
-                raise InvalidArgument('files parameter must be a list of File')
+                raise InvalidArgument("files parameter must be a list of File")
 
             try:
                 data = await state.http.send_files(
@@ -1407,13 +1470,13 @@ class Messageable:
                     files=files,
                     content=content,
                     tts=tts,
-                    embed=embed,
-                    embeds=embeds,
-                    nonce=nonce,
-                    allowed_mentions=allowed_mentions,
-                    message_reference=reference,
-                    stickers=stickers,
-                    components=components,
+                    embed=embed,  # type: ignore
+                    embeds=embeds,  # type: ignore
+                    nonce=nonce,  # type: ignore
+                    allowed_mentions=allowed_mentions,  # type: ignore
+                    message_reference=reference,  # type: ignore
+                    stickers=stickers,  # type: ignore
+                    components=components,  # type: ignore
                 )
             finally:
                 for f in files:
@@ -1423,20 +1486,20 @@ class Messageable:
                 channel.id,
                 content,
                 tts=tts,
-                embed=embed,
-                embeds=embeds,
-                nonce=nonce,
-                allowed_mentions=allowed_mentions,
-                message_reference=reference,
-                stickers=stickers,
-                components=components,
+                embed=embed,  # type: ignore
+                embeds=embeds,  # type: ignore
+                nonce=nonce,  # type: ignore
+                allowed_mentions=allowed_mentions,  # type: ignore
+                message_reference=reference,  # type: ignore
+                stickers=stickers,  # type: ignore
+                components=components,  # type: ignore
             )
 
         ret = state.create_message(channel=channel, data=data)
         if view:
             state.store_view(view, ret.id)
 
-        if delete_after is not None:
+        if delete_after is not MISSING:
             await ret.delete(delay=delete_after)
         return ret
 
@@ -1594,7 +1657,14 @@ class Messageable:
         :class:`~discord.Message`
             The message with the message data parsed.
         """
-        return HistoryIterator(self, limit=limit, before=before, after=after, around=around, oldest_first=oldest_first)
+        return HistoryIterator(
+            self,
+            limit=limit,
+            before=before,
+            after=after,
+            around=around,
+            oldest_first=oldest_first,
+        )
 
 
 class Connectable(Protocol):
@@ -1666,13 +1736,13 @@ class Connectable(Protocol):
         state = self._state
 
         if state._get_voice_client(key_id):
-            raise ClientException('Already connected to a voice channel.')
+            raise ClientException("Already connected to a voice channel.")
 
         client = state._get_client()
         voice = cls(client, self)
 
         if not isinstance(voice, VoiceProtocol):
-            raise TypeError('Type must meet VoiceProtocol abstract base class.')
+            raise TypeError("Type must meet VoiceProtocol abstract base class.")
 
         state._add_voice_client(key_id, voice)
 

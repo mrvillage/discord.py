@@ -25,45 +25,44 @@ from __future__ import annotations
 
 import inspect
 import re
-
-from typing import Any, Dict, Generic, List, Optional, TYPE_CHECKING, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Dict, Generic, List, Optional, TypeVar, Union
 
 import discord.abc
 import discord.utils
-
+from discord.interactions import Interaction
 from discord.message import Message
 
 if TYPE_CHECKING:
-    from typing_extensions import ParamSpec
-
     from discord.abc import MessageableChannel
     from discord.guild import Guild
+    from discord.interactions import InteractionResponse
     from discord.member import Member
     from discord.state import ConnectionState
+    from discord.types.interactions import ApplicationCommandInteractionDataOption
     from discord.user import ClientUser, User
     from discord.voice_client import VoiceProtocol
+    from discord.webhook import Webhook
+    from typing_extensions import ParamSpec
 
-    from .bot import Bot, AutoShardedBot
+    from .bot import AutoShardedBot, Bot
     from .cog import Cog
     from .core import Command
     from .help import HelpCommand
     from .view import StringView
 
-__all__ = (
-    'Context',
-)
+__all__ = ("Context",)
 
 MISSING: Any = discord.utils.MISSING
 
 
-T = TypeVar('T')
-BotT = TypeVar('BotT', bound="Union[Bot, AutoShardedBot]")
-CogT = TypeVar('CogT', bound="Cog")
+T = TypeVar("T")
+BotT = TypeVar("BotT", bound="Union[Bot, AutoShardedBot]")
+CogT = TypeVar("CogT", bound="Cog")
 
 if TYPE_CHECKING:
-    P = ParamSpec('P')
+    P = ParamSpec("P")
 else:
-    P = TypeVar('P')
+    P = TypeVar("P")
 
 
 class Context(discord.abc.Messageable, Generic[BotT]):
@@ -79,6 +78,8 @@ class Context(discord.abc.Messageable, Generic[BotT]):
     -----------
     message: :class:`.Message`
         The message that triggered the command being executed.
+    interaction: :class:`.Interaction`
+        The interaction that triggered the command being executed.
     bot: :class:`.Bot`
         The bot that contains the command being executed.
     args: :class:`list`
@@ -89,6 +90,8 @@ class Context(discord.abc.Messageable, Generic[BotT]):
         A dictionary of transformed arguments that were passed into the command.
         Similar to :attr:`args`\, if this is accessed in the
         :func:`.on_command_error` event then this dict could be incomplete.
+    options: :class:`list`
+        A list of transformed options that were passed into the command.
     current_parameter: Optional[:class:`inspect.Parameter`]
         The parameter that is currently being inspected and converted.
         This is only of use for within converters.
@@ -122,13 +125,16 @@ class Context(discord.abc.Messageable, Generic[BotT]):
         or invoked.
     """
 
-    def __init__(self,
+    def __init__(
+        self,
         *,
-        message: Message,
+        message: Message = MISSING,
+        interaction: Interaction = MISSING,
         bot: BotT,
-        view: StringView,
+        view: StringView = MISSING,
         args: List[Any] = MISSING,
         kwargs: Dict[str, Any] = MISSING,
+        options: List[ApplicationCommandInteractionDataOption] = MISSING,
         prefix: Optional[str] = None,
         command: Optional[Command] = None,
         invoked_with: Optional[str] = None,
@@ -138,10 +144,14 @@ class Context(discord.abc.Messageable, Generic[BotT]):
         command_failed: bool = False,
         current_parameter: Optional[inspect.Parameter] = None,
     ):
+        from .core import CommandType
+
+        self.interaction: Interaction = interaction
         self.message: Message = message
         self.bot: BotT = bot
         self.args: List[Any] = args or []
         self.kwargs: Dict[str, Any] = kwargs or {}
+        self.options: List[ApplicationCommandInteractionDataOption] = options or []
         self.prefix: Optional[str] = prefix
         self.command: Optional[Command] = command
         self.view: StringView = view
@@ -151,9 +161,21 @@ class Context(discord.abc.Messageable, Generic[BotT]):
         self.subcommand_passed: Optional[str] = subcommand_passed
         self.command_failed: bool = command_failed
         self.current_parameter: Optional[inspect.Parameter] = current_parameter
-        self._state: ConnectionState = self.message._state
+        if self.interaction:
+            type_ = self.interaction.data["type"]  # type: ignore
+            self.command_type: CommandType = CommandType.try_value(type_)  # type: ignore
+            if self.command_type is type_:
+                self.command_type: CommandType = CommandType.default
+        else:
+            self.command_type: CommandType = CommandType.default
+        if self.interaction:
+            self._state: ConnectionState = self.interaction._state
+        else:
+            self._state: ConnectionState = self.message._state
 
-    async def invoke(self, command: Command[CogT, P, T], /, *args: P.args, **kwargs: P.kwargs) -> T:
+    async def invoke(
+        self, command: Command[CogT, P, T], /, *args: P.args, **kwargs: P.kwargs
+    ) -> T:
         r"""|coro|
 
         Calls a command with the arguments given.
@@ -219,7 +241,7 @@ class Context(discord.abc.Messageable, Generic[BotT]):
         cmd = self.command
         view = self.view
         if cmd is None:
-            raise ValueError('This context is not valid.')
+            raise ValueError("This context is not valid.")
 
         # some state to revert to when we're done
         index, previous = view.index, view.previous
@@ -230,10 +252,10 @@ class Context(discord.abc.Messageable, Generic[BotT]):
 
         if restart:
             to_call = cmd.root_parent or cmd
-            view.index = len(self.prefix or '')
+            view.index = len(self.prefix or "")
             view.previous = 0
             self.invoked_parents = []
-            self.invoked_with = view.get_word() # advance to get the root command
+            self.invoked_with = view.get_word()  # advance to get the root command
         else:
             to_call = cmd
 
@@ -263,7 +285,7 @@ class Context(discord.abc.Messageable, Generic[BotT]):
         .. versionadded:: 2.0
         """
         if self.prefix is None:
-            return ''
+            return ""
 
         user = self.me
         # this breaks if the prefix mention is not the bot itself but I
@@ -271,7 +293,7 @@ class Context(discord.abc.Messageable, Generic[BotT]):
         # for this common use case rather than waste performance for the
         # odd one.
         pattern = re.compile(r"<@!?%s>" % user.id)
-        return pattern.sub("@%s" % user.display_name.replace('\\', r'\\'), self.prefix)
+        return pattern.sub("@%s" % user.display_name.replace("\\", r"\\"), self.prefix)
 
     @property
     def cog(self) -> Optional[Cog]:
@@ -284,6 +306,8 @@ class Context(discord.abc.Messageable, Generic[BotT]):
     @discord.utils.cached_property
     def guild(self) -> Optional[Guild]:
         """Optional[:class:`.Guild`]: Returns the guild associated with this context's command. None if not available."""
+        if self.interaction:
+            return self.interaction.guild
         return self.message.guild
 
     @discord.utils.cached_property
@@ -291,6 +315,8 @@ class Context(discord.abc.Messageable, Generic[BotT]):
         """Union[:class:`.abc.Messageable`]: Returns the channel associated with this context's command.
         Shorthand for :attr:`.Message.channel`.
         """
+        if self.interaction:
+            return self.interaction.channel  # type: ignore
         return self.message.channel
 
     @discord.utils.cached_property
@@ -298,6 +324,8 @@ class Context(discord.abc.Messageable, Generic[BotT]):
         """Union[:class:`~discord.User`, :class:`.Member`]:
         Returns the author associated with this context's command. Shorthand for :attr:`.Message.author`
         """
+        if self.interaction:
+            return self.interaction.user  # type: ignore
         return self.message.author
 
     @discord.utils.cached_property
@@ -308,11 +336,18 @@ class Context(discord.abc.Messageable, Generic[BotT]):
         # bot.user will never be None at this point.
         return self.guild.me if self.guild is not None else self.bot.user  # type: ignore
 
+    @discord.utils.cached_property
+    def response(self) -> Optional[InteractionResponse]:
+        return self.interaction and self.interaction.response
+
+    @discord.utils.cached_property
+    def followup(self) -> Optional[Webhook]:
+        return self.interaction and self.interaction.followup
+
     @property
     def voice_client(self) -> Optional[VoiceProtocol]:
         r"""Optional[:class:`.VoiceProtocol`]: A shortcut to :attr:`.Guild.voice_client`\, if applicable."""
-        g = self.guild
-        return g.voice_client if g else None
+        return g.voice_client if (g := self.guild) else None
 
     async def send_help(self, *args: Any) -> Any:
         """send_help(entity=<bot>)
@@ -344,7 +379,7 @@ class Context(discord.abc.Messageable, Generic[BotT]):
         Any
             The result of the help command, if any.
         """
-        from .core import Group, Command, wrap_callback
+        from .core import Command, Group, wrap_callback
         from .errors import CommandError
 
         bot = self.bot
@@ -381,7 +416,7 @@ class Context(discord.abc.Messageable, Generic[BotT]):
         await cmd.prepare_help_command(self, entity.qualified_name)
 
         try:
-            if hasattr(entity, '__cog_commands__'):
+            if hasattr(entity, "__cog_commands__"):
                 injected = wrap_callback(cmd.send_cog_help)
                 return await injected(entity)
             elif isinstance(entity, Group):
@@ -396,5 +431,18 @@ class Context(discord.abc.Messageable, Generic[BotT]):
             await cmd.on_help_command_error(self, e)
 
     @discord.utils.copy_doc(Message.reply)
-    async def reply(self, content: Optional[str] = None, **kwargs: Any) -> Message:
+    async def reply(self, content: Optional[str] = MISSING, **kwargs: Any) -> Message:
+        if self.interaction:
+            return await self.send(content, **kwargs)
         return await self.message.reply(content, **kwargs)
+
+    async def send(
+        self, content: Optional[str] = MISSING, **kwargs: Any
+    ) -> Optional[Message]:
+        """If is an interaction context will forward to :class:`InteractionResponse`.send_message first then :class:`Webhook`.send for subsequent calls. If message context will forward to :class:`abc.Messageable`.send"""
+        if self.interaction:
+            if self.interaction.response._responded:
+                return await self.followup.send(content, **kwargs)  # type: ignore
+            else:
+                return await self.response.send_message(content, **kwargs)  # type: ignore
+        return await super().send(content, **kwargs)
