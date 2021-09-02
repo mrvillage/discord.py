@@ -329,6 +329,9 @@ class BotBase(GroupMixin):
             self.help_command = help_command
         self.debug = options.get("debug", False)
         self.debug_guild_id = options.get("debug_guild_id")
+        self.debug_command_prefix = options.get("debug_command_prefix", command_prefix)
+        if self.debug:
+            self.command_prefix = self.debug_command_prefix
 
     # internal helpers
 
