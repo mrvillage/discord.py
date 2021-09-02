@@ -1187,28 +1187,28 @@ class BotBase(GroupMixin):
         *,
         cls: Type[Context] = Context,
     ) -> Context:
-        invoked_with = interaction.data["name"]
+        invoked_with = interaction.data["name"]  # type: ignore
         command = self.all_commands[invoked_with]
         self.get_command
         invoked_parents = []
-        if "options" in interaction.data:
-            data = interaction.data["options"][0]
+        if "options" in interaction.data:  # type: ignore
+            data = interaction.data["options"][0]  # type: ignore
             try:
-                while data["options"][0]["type"] in {1, 2}:
+                while data["options"][0]["type"] in {1, 2}:  # type: ignore
                     invoked_parents.append(invoked_with)
-                    invoked_with = data["name"]
-                    command = command.all_commands[invoked_with]
-                    data = data["options"][0]
+                    invoked_with = data["name"]  # type: ignore
+                    command = command.all_commands[invoked_with]  # type: ignore
+                    data = data["options"][0]  # type: ignore
             except KeyError:
                 pass
             if isinstance(command, GroupMixin):
                 invoked_parents.append(invoked_with)
-                invoked_with = data["name"]
+                invoked_with = data["name"]  # type: ignore
                 invoked_parents.append(invoked_with)
                 command = command.all_commands[invoked_with]
                 options = data.get("options", [])
             else:
-                options = interaction.data.get("options", [])
+                options = interaction.data.get("options", [])  # type: ignore
         else:
             options = []
         return cls(
