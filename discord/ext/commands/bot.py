@@ -327,6 +327,8 @@ class BotBase(GroupMixin):
             self.help_command = DefaultHelpCommand()
         else:
             self.help_command = help_command
+        self.debug = options.get("debug", False)
+        self.debug_guild_id = options.get("debug_guild_id")
 
     # internal helpers
 
@@ -1309,17 +1311,19 @@ class BotBase(GroupMixin):
                     else:
                         continue
                     application_command = application_commands.get(command.name)
-                    if application_command is None:
-                        await self.http.upsert_guild_command(self.application_id, 654109011473596417, data)  # type: ignore
-                    else:
-                        if application_command["description"] == data[
-                            "description"
-                        ] and application_command.get("options") == data.get("options"):
-                            continue
-                        data.pop("type")
-                        await self.http.edit_guild_command(self.application_id, 654109011473596417, application_command["id"], data)  # type: ignore
-                    continue
-                    if application_command is None:
+                    if self.debug:
+                        if application_command is None:
+                            await self.http.upsert_guild_command(self.application_id, self.debug_guild_id, data)  # type: ignore
+                        else:
+                            if application_command["description"] == data[
+                                "description"
+                            ] and application_command.get("options") == data.get(
+                                "options"
+                            ):
+                                continue
+                            data.pop("type")
+                            await self.http.edit_guild_command(self.application_id, self.debug_guild_id, application_command["id"], data)  # type: ignore
+                    elif application_command is None:
                         await self.http.upsert_global_command(self.application_id, data)  # type: ignore
                     else:
                         data.pop("type")
