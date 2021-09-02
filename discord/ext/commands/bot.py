@@ -1187,10 +1187,6 @@ class BotBase(GroupMixin):
         *,
         cls: Type[Context] = Context,
     ) -> Context:
-        if TYPE_CHECKING:
-            assert isinstance(
-                interaction.data, interactions.ApplicationCommandInteractionData
-            )
         invoked_with = interaction.data["name"]
         command = self.all_commands[invoked_with]
         self.get_command
@@ -1198,18 +1194,21 @@ class BotBase(GroupMixin):
         if "options" in interaction.data:
             data = interaction.data["options"][0]
             try:
-                while data["options"][0]["type"] in {1, 2}:  # type: ignore
+                while data["options"][0]["type"] in {1, 2}:
                     invoked_parents.append(invoked_with)
-                    invoked_with = data["name"]  # type: ignore
-                    command = command.all_commands[invoked_with]  # type: ignore
-                    data = data["options"][0]  # type: ignore
+                    invoked_with = data["name"]
+                    command = command.all_commands[invoked_with]
+                    data = data["options"][0]
             except KeyError:
                 pass
-            invoked_parents.append(invoked_with)
-            invoked_with = data["name"]  # type: ignore
-            invoked_parents.append(invoked_with)
-            command = command.all_commands[invoked_with]  # type: ignore
-            options = data.get("options", [])  # type: ignore
+            if isinstance(command, GroupMixin):
+                invoked_parents.append(invoked_with)
+                invoked_with = data["name"]
+                invoked_parents.append(invoked_with)
+                command = command.all_commands[invoked_with]
+                options = data.get("options", [])
+            else:
+                options = interaction.data.get("options", [])
         else:
             options = []
         return cls(
