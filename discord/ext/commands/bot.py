@@ -1186,31 +1186,25 @@ class BotBase(GroupMixin):
             assert isinstance(
                 interaction.data, interactions.ApplicationCommandInteractionData
             )
-        command = self.get_command(interaction.data["name"])
         invoked_with = interaction.data["name"]
+        command = self.all_commands[invoked_with]
+        self.get_command
         invoked_parents = []
         if "options" in interaction.data:
-            if TYPE_CHECKING:
-                assert "options" in interaction.data["options"][0]
-            if interaction.data["options"][0]["type"] == 1:
-                invoked_parents = [invoked_with]
-                invoked_with = interaction.data["options"][0]["name"]
-                options = interaction.data["options"][0]["options"]
-                command = command.all_commands[invoked_with]  # type: ignore
-            elif interaction.data["options"][0]["type"] == 2:
-                if TYPE_CHECKING:
-                    assert isinstance(interaction.data["options"], list)
-                    assert isinstance(interaction.data["options"][0]["options"], list)
-                    assert isinstance(
-                        interaction.data["options"][0]["options"][0],
-                        interactions.ApplicationCommandInteractionData,
-                    )
-                invoked_parents = [invoked_with, interaction.data["options"][0]["name"]]
-                invoked_with = interaction.data["options"][0]["options"][0]["name"]
-                command = command.all_commands[invoked_with]  # type: ignore
-                options = interaction.data["options"][0]["options"][0]["options"]
-            else:
-                options = interaction.data["options"]
+            data = interaction.data["options"][0]
+            try:
+                while data["options"][0]["type"] in {1, 2}:  # type: ignore
+                    invoked_parents.append(invoked_with)
+                    invoked_with = data["name"]  # type: ignore
+                    command = command.all_commands[invoked_with]  # type: ignore
+                    data = data["options"][0]  # type: ignore
+            except KeyError:
+                pass
+            invoked_parents.append(invoked_with)
+            invoked_with = data["name"]  # type: ignore
+            invoked_parents.append(invoked_with)
+            command = command.all_commands[invoked_with]  # type: ignore
+            options = data.get("options", [])  # type: ignore
         else:
             options = []
         return cls(
