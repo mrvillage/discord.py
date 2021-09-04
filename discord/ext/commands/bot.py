@@ -498,7 +498,7 @@ class BotBase(GroupMixin):
 
     async def can_run(self, ctx: Context, *, call_once: bool = False) -> bool:
         if ctx.command_type not in ctx.command.type:  # type: ignore
-            return False
+            raise TypeError
 
         data = self._check_once if call_once else self._checks
 
@@ -1232,15 +1232,21 @@ class BotBase(GroupMixin):
         ctx: :class:`.Context`
             The invocation context to invoke.
         """
+        # dispatching the command event is duplicated three times to ensure
+        # that it's not dispatched if the command is not of a valid type
         if ctx.command is not None:
-            self.dispatch("command", ctx)
             try:
                 if await self.can_run(ctx, call_once=True):
+                    self.dispatch("command", ctx)
                     await ctx.command.invoke(ctx)
                 else:
+                    self.dispatch("command", ctx)
                     raise errors.CheckFailure("The global check once functions failed.")
             except errors.CommandError as exc:
+                self.dispatch("command", ctx)
                 await ctx.command.dispatch_error(ctx, exc)
+            except TypeError:
+                pass
             else:
                 self.dispatch("command_completion", ctx)
         elif ctx.invoked_with:
