@@ -1292,6 +1292,7 @@ class BotBase(GroupMixin):
     async def register_application_commands(self) -> None:
         raw_application_commands = await self.http.get_guild_commands(self.application_id, 654109011473596417)  # type: ignore
         application_commands = {i["name"]: i for i in raw_application_commands}
+        application_id = self.application_id
         for command in self.commands:
             if (
                 len(command.type) > 1
@@ -1315,7 +1316,7 @@ class BotBase(GroupMixin):
                     application_command = application_commands.get(command.name)
                     if self.debug:
                         if application_command is None:
-                            await self.http.upsert_guild_command(self.application_id, self.debug_guild_id, data)  # type: ignore
+                            await self.http.upsert_guild_command(application_id, self.debug_guild_id, data)  # type: ignore
                         else:
                             if application_command["description"] == data[
                                 "description"
@@ -1324,9 +1325,9 @@ class BotBase(GroupMixin):
                             ):
                                 continue
                             data.pop("type")
-                            await self.http.edit_guild_command(self.application_id, self.debug_guild_id, application_command["id"], data)  # type: ignore
+                            await self.http.edit_guild_command(application_id, self.debug_guild_id, application_command["id"], data)  # type: ignore
                     elif application_command is None:
-                        await self.http.upsert_global_command(self.application_id, data)  # type: ignore
+                        await self.http.upsert_global_command(application_id, data)  # type: ignore
                     else:
                         data.pop("type")
                         await self.http.edit_global_command(application_id, application_command["id"], data)  # type: ignore
