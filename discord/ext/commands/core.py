@@ -804,7 +804,12 @@ class Command(_BaseCommand, Generic[CogT, P, T]):
             for name, param in iterator:
                 ctx.current_parameter = param
                 converter = get_converter(param)
-                argument = options[name]["value"]  # type: ignore
+                try:
+                    argument = options[name]["value"]  # type: ignore
+                except KeyError:
+                    argument = (
+                        param.default if param.default is not param.empty else MISSING
+                    )
                 if isinstance(argument, str):
                     value = await run_converters(ctx, converter, argument, param)
                 else:
