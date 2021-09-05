@@ -461,6 +461,7 @@ class Context(discord.abc.Messageable, Generic[BotT]):
     async def reply(
         self,
         content: Optional[str] = MISSING,
+        *,
         return_message: bool = False,
         **kwargs: Any,
     ) -> Optional[Union[WebhookMessage, Message]]:
@@ -493,6 +494,7 @@ class Context(discord.abc.Messageable, Generic[BotT]):
     async def send(
         self,
         content: Optional[str] = MISSING,
+        *,
         return_message: bool = False,
         **kwargs: Any,
     ) -> Optional[Union[WebhookMessage, Message]]:
