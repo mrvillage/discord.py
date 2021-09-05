@@ -441,26 +441,6 @@ class Context(discord.abc.Messageable, Generic[BotT]):
         except CommandError as e:
             await cmd.on_help_command_error(self, e)
 
-    @overload
-    async def reply(
-        self,
-        content: Optional[str] = MISSING,
-        *,
-        return_message: Literal[True],
-        **kwargs: Any,
-    ) -> Union[WebhookMessage, Message]:
-        ...
-
-    @overload
-    async def reply(
-        self,
-        content: Optional[str] = MISSING,
-        *,
-        return_message: Literal[False],
-        **kwargs: Any,
-    ) -> None:
-        ...
-
     @discord.utils.copy_doc(Message.reply)
     async def reply(
         self,
@@ -468,31 +448,11 @@ class Context(discord.abc.Messageable, Generic[BotT]):
         *,
         return_message: bool = False,
         **kwargs: Any,
-    ) -> Optional[Union[WebhookMessage, Message]]:
+    ) -> Union[WebhookMessage, Message]:
         if self.interaction:
             # no idea why this raises a type error
             return await self.send(content, return_message=return_message, **kwargs)  # type: ignore
         return await self.message.reply(content, **kwargs)
-
-    @overload
-    async def send(
-        self,
-        content: Optional[str] = MISSING,
-        *,
-        return_message: Literal[True],
-        **kwargs: Any,
-    ) -> Union[WebhookMessage, Message]:
-        ...
-
-    @overload
-    async def send(
-        self,
-        content: Optional[str] = MISSING,
-        *,
-        return_message: Literal[False],
-        **kwargs: Any,
-    ) -> None:
-        ...
 
     @discord.utils.copy_doc(discord.abc.Messageable.send)
     async def send(
@@ -501,7 +461,7 @@ class Context(discord.abc.Messageable, Generic[BotT]):
         *,
         return_message: bool = False,
         **kwargs: Any,
-    ) -> Optional[Union[WebhookMessage, Message]]:
+    ) -> Union[WebhookMessage, Message]:
         """
         If is an interaction context will forward to :math:`InteractionResponse.send_message` first then :math:`Webhook.send` for subsequent calls. If message context will forward to :meth:`abc.Messageable.send`.
 
@@ -512,7 +472,7 @@ class Context(discord.abc.Messageable, Generic[BotT]):
                     ephemeral=kwargs.get("ephemeral", False)
                 )
             if self.interaction.response._responded:
-                return await self.followup.send(content, **kwargs)  # type: ignore
+                return await self.followup.send(content, **kwargs)
             else:
                 return await self.response.send_message(content, **kwargs)  # type: ignore
         return await super().send(content, **kwargs)
