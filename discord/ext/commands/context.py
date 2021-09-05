@@ -25,7 +25,18 @@ from __future__ import annotations
 
 import inspect
 import re
-from typing import TYPE_CHECKING, Any, Dict, Generic, List, Optional, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Generic,
+    List,
+    Literal,
+    Optional,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import discord.abc
 import discord.utils
@@ -430,23 +441,67 @@ class Context(discord.abc.Messageable, Generic[BotT]):
         except CommandError as e:
             await cmd.on_help_command_error(self, e)
 
+    @overload
+    async def reply(
+        self,
+        content: Optional[str] = MISSING,
+        *,
+        return_message: Literal[True],
+        **kwargs: Any,
+    ) -> Union[WebhookMessage, Message]:
+        ...
+
+    @overload
+    async def reply(
+        self, content: str, *, return_message: Literal[False], **kwargs: Any
+    ) -> None:
+        ...
+
     @discord.utils.copy_doc(Message.reply)
     async def reply(
-        self, content: Optional[str] = MISSING, **kwargs: Any
+        self,
+        content: Optional[str] = MISSING,
+        return_message: bool = False,
+        **kwargs: Any,
     ) -> Optional[Union[WebhookMessage, Message]]:
         if self.interaction:
-            return await self.send(content, **kwargs)
+            # no idea why this raises a type error
+            return await self.send(content, return_message=return_message, **kwargs)  # type: ignore
         return await self.message.reply(content, **kwargs)
 
+    @overload
     async def send(
-        self, content: Optional[str] = MISSING, **kwargs: Any
+        self,
+        content: Optional[str] = MISSING,
+        *,
+        return_message: Literal[True],
+        **kwargs: Any,
+    ) -> Union[WebhookMessage, Message]:
+        ...
+
+    @overload
+    async def send(
+        self,
+        content: Optional[str] = MISSING,
+        *,
+        return_message: Literal[False],
+        **kwargs: Any,
+    ) -> None:
+        ...
+
+    @discord.utils.copy_doc(discord.abc.Messageable.send)
+    async def send(
+        self,
+        content: Optional[str] = MISSING,
+        return_message: bool = False,
+        **kwargs: Any,
     ) -> Optional[Union[WebhookMessage, Message]]:
         """
         If is an interaction context will forward to :math:`InteractionResponse.send_message` first then :math:`Webhook.send` for subsequent calls. If message context will forward to :meth:`abc.Messageable.send`.
 
         If the return_message parameter is `True`, will defer then use the followup webhook to send a message"""
         if self.interaction:
-            if kwargs.pop("return_message", False):
+            if return_message:
                 await self.interaction.response.defer(
                     ephemeral=kwargs.get("ephemeral", False)
                 )
