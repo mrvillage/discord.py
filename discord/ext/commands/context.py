@@ -35,13 +35,13 @@ from discord.message import Message
 if TYPE_CHECKING:
     from discord.abc import MessageableChannel
     from discord.guild import Guild
-    from discord.interactions import InteractionResponse
+    from discord.interactions import InteractionMessage, InteractionResponse
     from discord.member import Member
     from discord.state import ConnectionState
     from discord.types.interactions import ApplicationCommandInteractionDataOption
     from discord.user import ClientUser, User
     from discord.voice_client import VoiceProtocol
-    from discord.webhook import Webhook
+    from discord.webhook import Webhook, WebhookMessage
     from typing_extensions import ParamSpec
 
     from .bot import AutoShardedBot, Bot
@@ -431,18 +431,52 @@ class Context(discord.abc.Messageable, Generic[BotT]):
             await cmd.on_help_command_error(self, e)
 
     @discord.utils.copy_doc(Message.reply)
-    async def reply(self, content: Optional[str] = MISSING, **kwargs: Any) -> Message:
+    async def reply(
+        self, content: Optional[str] = MISSING, **kwargs: Any
+    ) -> Optional[Union[WebhookMessage, Message]]:
         if self.interaction:
             return await self.send(content, **kwargs)
         return await self.message.reply(content, **kwargs)
 
     async def send(
         self, content: Optional[str] = MISSING, **kwargs: Any
-    ) -> Optional[Message]:
-        """If is an interaction context will forward to :class:`InteractionResponse`.send_message first then :class:`Webhook`.send for subsequent calls. If message context will forward to :class:`abc.Messageable`.send"""
+    ) -> Optional[Union[WebhookMessage, Message]]:
+        """
+        If is an interaction context will forward to :math:`InteractionResponse.send_message` first then :math:`Webhook.send` for subsequent calls. If message context will forward to :meth:`abc.Messageable.send`.
+
+        If the return_message parameter is `True`, will defer then use the followup webhook to send a message"""
         if self.interaction:
+            if kwargs.pop("return_message", False):
+                await self.interaction.response.defer(
+                    ephemeral=kwargs.get("ephemeral", False)
+                )
             if self.interaction.response._responded:
                 return await self.followup.send(content, **kwargs)  # type: ignore
             else:
                 return await self.response.send_message(content, **kwargs)  # type: ignore
         return await super().send(content, **kwargs)
+
+    async def edit(
+        self, content: Optional[str] = MISSING, **kwargs: Any
+    ) -> InteractionMessage:
+        """|coro|
+
+        Edits the message sent during the interaction.
+
+        Parameters
+        ------------
+        content: Optional[str]
+            The new content to replace the interaction message with.
+        kwargs
+            Additional arguments that :meth:`discord.Interaction.edit_original_message` takes.
+
+        Returns
+        --------
+        :class:`InteractionMessage`
+            The edited message.
+        """
+        if self.interaction:
+            return await self.interaction.edit_original_message(
+                content=content, **kwargs
+            )
+        return MISSING
