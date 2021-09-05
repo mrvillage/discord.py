@@ -1281,6 +1281,8 @@ class BotBase(GroupMixin):
             if argument.author.bot:
                 return
             ctx = await self.get_context(argument)
+        elif argument.type != discord.InteractionType.application_command:
+            return
         else:
             ctx = await self.get_interaction_context(argument)
 
