@@ -453,7 +453,11 @@ class Context(discord.abc.Messageable, Generic[BotT]):
 
     @overload
     async def reply(
-        self, content: str, *, return_message: Literal[False], **kwargs: Any
+        self,
+        content: Optional[str] = MISSING,
+        *,
+        return_message: Literal[False],
+        **kwargs: Any,
     ) -> None:
         ...
 
