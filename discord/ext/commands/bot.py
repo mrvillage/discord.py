@@ -283,6 +283,21 @@ def _convert_options(
     return options
 
 
+def _check_options(current: Dict[str, Any], new: Dict[str, Any]) -> bool:
+    if (current and not new) or (new and not current):
+        return False
+    if any(i.get("options", []) for i in new):  # type: ignore
+        d = {i.get("name"): i.get("options", []) for i in current}  # type: ignore
+        return all(
+            _check_options(
+                d.get(i.get("name"), []),  # type: ignore
+                i.get("options", []),  # type: ignore
+            )
+            for i in new
+        )
+    return all(any(i.get("name") == j.get("name") and i.get("description") == j.get("description") and _check_options(j.get("options", []), i.get("options", [])) and i.get("default_permissions", True) is j.get("default_permissions", True) for j in current) for i in new)  # type: ignore
+
+
 class _DefaultRepr:
     def __repr__(self):
         return "<default-help-command>"
@@ -1297,13 +1312,13 @@ class BotBase(GroupMixin):
     async def on_ready(self):
         await self.register_application_commands()
 
-    async def register_application_commands(self) -> None:
+    async def register_application_commands(self) -> None:  # sourcery no-metrics
         if self.debug:
             raw_application_commands = await self.http.get_guild_commands(self.application_id, 654109011473596417)  # type: ignore
         else:
             raw_application_commands = await self.http.get_global_commands(self.application_id)  # type: ignore
         application_commands = {i["name"]: i for i in raw_application_commands}
-        application_id = self.application_id
+        application_id = self.application_id  # type: ignore
         for command in self.commands:
             if (
                 len(command.type) > 1
@@ -1331,8 +1346,9 @@ class BotBase(GroupMixin):
                         else:
                             if application_command["description"] == data[
                                 "description"
-                            ] and application_command.get("options") == data.get(
-                                "options"
+                            ] and _check_options(
+                                application_command.get("options", []),  # type: ignore
+                                data.get("options", []),  # type: ignore
                             ):
                                 continue
                             data.pop("type")
@@ -1340,6 +1356,12 @@ class BotBase(GroupMixin):
                     elif application_command is None:
                         await self.http.upsert_global_command(application_id, data)  # type: ignore
                     else:
+                        if application_command["description"] == data[
+                            "description"
+                        ] and _check_options(
+                            application_command.get("options", []), data.get("options", [])  # type: ignore
+                        ):
+                            continue
                         data.pop("type")
                         await self.http.edit_global_command(application_id, application_command["id"], data)  # type: ignore
 
