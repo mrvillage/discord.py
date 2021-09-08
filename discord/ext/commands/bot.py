@@ -1312,13 +1312,13 @@ class BotBase(GroupMixin):
     async def on_ready(self):
         await self.register_application_commands()
 
-    async def register_application_commands(self) -> None:  # sourcery no-metrics
+    async def register_application_commands(self) -> None:
         if self.debug:
             raw_application_commands = await self.http.get_guild_commands(self.application_id, 654109011473596417)  # type: ignore
         else:
             raw_application_commands = await self.http.get_global_commands(self.application_id)  # type: ignore
         application_commands = {i["name"]: i for i in raw_application_commands}
-        application_id = self.application_id  # type: ignore
+        application_id = self.application_id
         for command in self.commands:
             if (
                 len(command.type) > 1
