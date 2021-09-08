@@ -194,12 +194,10 @@ def _convert_options(
     options = []
     if isinstance(command, GroupMixin) and group != 1:
         commands = command.commands
-        try:
-            updated_group = 2 if isinstance(next(iter(commands)), GroupMixin) else 1
-        except StopIteration:
-            updated_group = 1
+
         for com in commands:
             if len(com.type) > 1 or next(iter(com.type)) is not CommandType.default:
+                updated_group = 2 if group == 0 and isinstance(com, GroupMixin) else 1
                 opt = _convert_options(com, updated_group)
                 if opt:
                     options.append(
