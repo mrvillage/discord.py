@@ -176,11 +176,11 @@ def _convert_param(
             return 10
         return 3
     elif origin is Literal:
-        if annotation.__args__[0] is str:
+        if isinstance(annotation.__args__[0], str):
             return (3, [{"name": str(i), "value": str(i)} for i in annotation.__args__])
-        if annotation.__args__[0] is int:
+        if isinstance(annotation.__args__[0], int):
             return (4, [{"name": str(i), "value": int(i)} for i in annotation.__args__])
-        if annotation.__args__[0] is float:
+        if isinstance(annotation.__args__[0], float):
             return (
                 10,
                 [{"name": str(i), "value": float(i)} for i in annotation.__args__],
@@ -242,14 +242,14 @@ def _convert_options(
         type_ = _convert_param(param)
         # this is split in duplicates for easy edit comparisons
         if param.default == param.empty:
-            if isinstance(type_, dict):
+            if isinstance(type_, tuple):  # type: ignore
                 options.append(
                     {
-                        "type": type_,
+                        "type": type_[0],  # type: ignore
                         "name": name,
                         "description": command.descriptions.get(name, "\u200b"),
                         "required": True,
-                        "choices": type_,
+                        "choices": type_[1],  # type: ignore
                     }
                 )
             else:
@@ -261,13 +261,13 @@ def _convert_options(
                         "required": True,
                     }
                 )
-        elif isinstance(type_, dict):
+        elif isinstance(type_, tuple):  # type: ignore
             options.append(
                 {
-                    "type": type_,
+                    "type": type_[0],  # type: ignore
                     "name": name,
                     "description": command.descriptions.get(name, "\u200b"),
-                    "choices": type_,
+                    "choices": type_[1],  # type: ignore
                 }
             )
         else:
@@ -282,8 +282,11 @@ def _convert_options(
 
 
 def _check_options(current: Dict[str, Any], new: Dict[str, Any]) -> bool:
+    # sourcery skip: remove-redundant-if
     if (current and not new) or (new and not current):
         return False
+    if not new and not current:
+        return True
     if any(i.get("options", []) for i in new):  # type: ignore
         d = {i.get("name"): i.get("options", []) for i in current}  # type: ignore
         return all(
@@ -293,7 +296,16 @@ def _check_options(current: Dict[str, Any], new: Dict[str, Any]) -> bool:
             )
             for i in new
         )
-    return all(any(i.get("name") == j.get("name") and i.get("description") == j.get("description") and _check_options(j.get("options", []), i.get("options", [])) and i.get("default_permissions", True) is j.get("default_permissions", True) for j in current) for i in new)  # type: ignore
+    return all(any(i.get("name") == j.get("name") and i.get("description") == j.get("description") and _check_options(j.get("options", []), i.get("options", [])) and i.get("default_permissions", True) is j.get("default_permissions", True) and _check_choices(j.get("choices", []), i.get("choices", [])) for i in new) for j in current) and all(any(i.get("name") == j.get("name") and i.get("description") == j.get("description") and _check_options(j.get("options", []), i.get("options", [])) and i.get("default_permissions", True) is j.get("default_permissions", True) and _check_choices(j.get("choices", []), i.get("choices", [])) for j in current) for i in new)  # type: ignore
+
+
+def _check_choices(current: Dict[str, Any], new: Dict[str, Any]) -> bool:
+    # sourcery skip: remove-redundant-if
+    if (current and not new) or (new and not current):
+        return False
+    if not new and not current:
+        return True
+    return all(any(i.get("name") == j.get("name") and i.get("value") == j.get("value") for i in new) for j in current) and all(any(i.get("name") == j.get("name") and i.get("value") == j.get("value") for j in current) for i in new)  # type: ignore
 
 
 class _DefaultRepr:
