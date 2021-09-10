@@ -178,7 +178,7 @@ def _convert_param(
     elif origin is Literal:
         if annotation.__args__[0] is str:
             return (3, [{"name": str(i), "value": str(i)} for i in annotation.__args__])
-        if annotation.__args[0] is int:
+        if annotation.__args__[0] is int:
             return (4, [{"name": str(i), "value": int(i)} for i in annotation.__args__])
         if annotation.__args__[0] is float:
             return (
