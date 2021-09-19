@@ -2,7 +2,6 @@ import asyncio
 
 import discord
 import youtube_dl
-
 from discord.ext import commands
 
 # Suppress noise about console usage from errors
