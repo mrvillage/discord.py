@@ -24,31 +24,34 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-import re
 import inspect
+import re
 from typing import (
+    TYPE_CHECKING,
     Any,
     Dict,
     Generic,
     Iterable,
+    List,
     Literal,
     Optional,
-    TYPE_CHECKING,
-    List,
     Protocol,
+    Tuple,
     Type,
     TypeVar,
-    Tuple,
     Union,
     runtime_checkable,
 )
 
 import discord
+
 from .errors import *
+from .view import StringView
 
 if TYPE_CHECKING:
-    from .context import Context
     from discord.message import PartialMessageableChannel
+
+    from .context import Context
 
 
 __all__ = (
@@ -1127,6 +1130,22 @@ async def _actual_conversion(
     if converter is bool:
         return _convert_to_bool(argument)
 
+    if converter in {List, list, Tuple, tuple}:
+        result = []
+        view = StringView(argument)
+        while not view.eof:
+            try:
+                arg = view.get_quoted_word()
+                value = await run_converters(ctx, converter, arg, param)  # type: ignore
+            except Exception:
+                pass
+            else:
+                result.append(value)
+        if converter is Tuple or converter is tuple:
+            return tuple(result)
+        else:
+            return result
+
     try:
         module = converter.__module__
     except AttributeError:
@@ -1244,6 +1263,77 @@ async def run_converters(
 
         # if we're here, then we failed to match all the literals
         raise BadLiteralArgument(param, literal_args, errors)
+
+    # this is a hacky fix for Discord stripping whitespace in between mentions in slash command argument
+    def any_is_snowflake(iterable):
+        l = []
+        for item in iterable:
+            try:
+                if item.__origin__ is Union:
+                    l.append(any_is_snowflake(item.__args__))
+            except AttributeError:
+                pass
+        for item in iterable:
+            if isinstance(item, discord.abc.Snowflake):
+                return True
+        return any(l)
+
+    if origin is list:
+        if any_is_snowflake(converter.__args__):
+            view = StringView(argument, True)
+        else:
+            view = StringView(argument)
+        results = []
+        while not view.eof:
+            view.skip_ws()
+            if view.eof:
+                break
+
+            word = view.get_quoted_word()
+            if word is None:
+                break
+
+            try:
+                converted = await run_converters(
+                    ctx, converter.__args__[0], word, param
+                )
+            except Exception:
+                pass
+            else:
+                results.append(converted)
+
+        return results
+
+    if origin is tuple:
+        if converter.__args__[-1] is Ellipsis:
+            return tuple(
+                await run_converters(ctx, List[converter.__args__[0]], argument, param)
+            )
+        if any_is_snowflake(converter.__args__):
+            view = StringView(argument, True)
+        else:
+            view = StringView(argument)
+        results = []
+        for conv in converter.__args__:
+            view.skip_ws()
+            if view.eof:
+                break
+
+            word = view.get_quoted_word()
+            if word is None:
+                break
+
+            try:
+                converted = await run_converters(ctx, conv, word, param)
+            except Exception:
+                pass
+            else:
+                results.append(converted)
+
+        if len(results) != len(origin.__args__):  # type: ignore
+            raise BadArgument(argument)
+
+        return tuple(results)
 
     # This must be the last if-clause in the chain of origin checking
     # Nearly every type is a generic type within the typing library
