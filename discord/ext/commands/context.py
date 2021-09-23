@@ -475,6 +475,7 @@ class Context(discord.abc.Messageable, Generic[BotT]):
                 return await self.followup.send(content, **kwargs)
             else:
                 return await self.response.send_message(content, **kwargs)  # type: ignore
+        kwargs.pop("ephemeral", True)
         return await super().send(content, **kwargs)
 
     async def edit(
