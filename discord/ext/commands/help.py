@@ -587,6 +587,9 @@ class HelpCommand:
                 return await cmd.can_run(self.context)
             except CommandError:
                 return False
+            # allows it to function for application commands with the type kwarg
+            except TypeError:
+                return False
 
         ret = []
         for cmd in iterator:
