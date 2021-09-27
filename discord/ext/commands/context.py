@@ -452,6 +452,7 @@ class Context(discord.abc.Messageable, Generic[BotT]):
         if self.interaction:
             # no idea why this raises a type error
             return await self.send(content, return_message=return_message, **kwargs)  # type: ignore
+        kwargs.pop("ephemeral", True)
         return await self.message.reply(content, **kwargs)
 
     @discord.utils.copy_doc(discord.abc.Messageable.send)
