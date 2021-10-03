@@ -168,7 +168,7 @@ def _convert_param(
         types = [
             _convert_application_command_option_type(i)
             for i in annotation.__args__
-            if i is type(None)
+            if i is not type(None)
         ]
         if all(i == types[0] for i in types):
             return types[0]
