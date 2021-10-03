@@ -165,6 +165,29 @@ def _convert_param(
         return 3
     origin = getattr(annotation, "__origin__", None)
     if origin is Union:
+        if len(annotation.__args__) == 2 and any(
+            getattr(i, "__origin__", None) is Literal for i in annotation.__args__
+        ):
+            annotation = next(
+                i
+                for i in annotation.__args__
+                if getattr(i, "__origin__", None) is Literal
+            )
+            if isinstance(annotation.__args__[0], str):
+                return (
+                    3,
+                    [{"name": str(i), "value": str(i)} for i in annotation.__args__],
+                )
+            if isinstance(annotation.__args__[0], int):
+                return (
+                    4,
+                    [{"name": str(i), "value": int(i)} for i in annotation.__args__],
+                )
+            if isinstance(annotation.__args__[0], float):
+                return (
+                    10,
+                    [{"name": str(i), "value": float(i)} for i in annotation.__args__],
+                )
         types = [
             _convert_application_command_option_type(i)
             for i in annotation.__args__
