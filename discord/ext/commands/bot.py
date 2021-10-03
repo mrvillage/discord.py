@@ -166,7 +166,9 @@ def _convert_param(
     origin = getattr(annotation, "__origin__", None)
     if origin is Union:
         types = [
-            _convert_application_command_option_type(i) for i in annotation.__args__
+            _convert_application_command_option_type(i)
+            for i in annotation.__args__
+            if i is type(None)
         ]
         if all(i == types[0] for i in types):
             return types[0]
