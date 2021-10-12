@@ -44,6 +44,7 @@ from typing import (
 )
 
 import discord
+from discord.utils import MISSING
 
 from .errors import *
 from .view import StringView
@@ -1227,7 +1228,8 @@ async def run_converters(
             # so we should just undo the view, return the default, and allow parsing to continue
             # with the other parameters
             if conv is _NoneType and param.kind != param.VAR_POSITIONAL:
-                ctx.view.undo()
+                if ctx.view is not MISSING:
+                    ctx.view.undo()
                 return None if param.default is param.empty else param.default
 
             try:
