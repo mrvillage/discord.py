@@ -1348,12 +1348,7 @@ class BotBase(GroupMixin):
         await self.register_application_commands()
 
     async def register_application_commands(self) -> None:
-        if self.debug:
-            raw_application_commands = await self.http.get_guild_commands(self.application_id, 654109011473596417)  # type: ignore
-        else:
-            raw_application_commands = await self.http.get_global_commands(self.application_id)  # type: ignore
-        application_commands = {i["name"]: i for i in raw_application_commands}
-        application_id = self.application_id
+        command_data = []
         for command in self.commands:
             if (
                 len(command.type) > 1
@@ -1364,41 +1359,71 @@ class BotBase(GroupMixin):
                     if type_ is CommandType.default:
                         continue
                     if type_ is CommandType.chat_input:
-                        data = {
+                        command_data.append({
                             "name": command.name,
                             "description": command.brief or "\u200b",
                             "options": options,
                             "type": type_.value,
-                        }
+                        })
                     elif type_ is CommandType.user or type_ is CommandType.message:
-                        data = {"name": command.name, "type": type_.value}
+                        command_data.append({"name": command.name, "type": type_.value})
                     else:
                         continue
-                    application_command = application_commands.get(command.name)
-                    if self.debug:
-                        if application_command is None:
-                            await self.http.upsert_guild_command(application_id, self.debug_guild_id, data)  # type: ignore
-                        else:
-                            if application_command["description"] == data[
-                                "description"
-                            ] and _check_options(
-                                application_command.get("options", []),  # type: ignore
-                                data.get("options", []),  # type: ignore
-                            ):
-                                continue
-                            data.pop("type")
-                            await self.http.edit_guild_command(application_id, self.debug_guild_id, application_command["id"], data)  # type: ignore
-                    elif application_command is None:
-                        await self.http.upsert_global_command(application_id, data)  # type: ignore
-                    else:
-                        if application_command["description"] == data[
-                            "description"
-                        ] and _check_options(
-                            application_command.get("options", []), data.get("options", [])  # type: ignore
-                        ):
-                            continue
-                        data.pop("type")
-                        await self.http.edit_global_command(application_id, application_command["id"], data)  # type: ignore
+        if self.debug:
+            await self.http.bulk_upsert_guild_commands(self.application_id, self.debug_guild_id, command_data)
+        else:
+            await self.http.bulk_upsert_global_commands(self.application_id, command_data)
+        # if self.debug:
+        #     raw_application_commands = await self.http.get_guild_commands(self.application_id, 654109011473596417)  # type: ignore
+        # else:
+        #     raw_application_commands = await self.http.get_global_commands(self.application_id)  # type: ignore
+        # application_commands = {i["name"]: i for i in raw_application_commands}
+        # application_id = self.application_id
+        # for command in self.commands:
+        #     if (
+        #         len(command.type) > 1
+        #         or next(iter(command.type)) is not CommandType.default
+        #     ):
+        #         options = _convert_options(command)
+        #         for type_ in command.type:
+        #             if type_ is CommandType.default:
+        #                 continue
+        #             if type_ is CommandType.chat_input:
+        #                 data = {
+        #                     "name": command.name,
+        #                     "description": command.brief or "\u200b",
+        #                     "options": options,
+        #                     "type": type_.value,
+        #                 }
+        #             elif type_ is CommandType.user or type_ is CommandType.message:
+        #                 data = {"name": command.name, "type": type_.value}
+        #             else:
+        #                 continue
+        #             application_command = application_commands.get(command.name)
+        #             if self.debug:
+        #                 if application_command is None:
+        #                     await self.http.upsert_guild_command(application_id, self.debug_guild_id, data)  # type: ignore
+        #                 else:
+        #                     if application_command["description"] == data[
+        #                         "description"
+        #                     ] and _check_options(
+        #                         application_command.get("options", []),  # type: ignore
+        #                         data.get("options", []),  # type: ignore
+        #                     ):
+        #                         continue
+        #                     data.pop("type")
+        #                     await self.http.edit_guild_command(application_id, self.debug_guild_id, application_command["id"], data)  # type: ignore
+        #             elif application_command is None:
+        #                 await self.http.upsert_global_command(application_id, data)  # type: ignore
+        #             else:
+        #                 if application_command["description"] == data[
+        #                     "description"
+        #                 ] and _check_options(
+        #                     application_command.get("options", []), data.get("options", [])  # type: ignore
+        #                 ):
+        #                     continue
+        #                 data.pop("type")
+        #                 await self.http.edit_global_command(application_id, application_command["id"], data)  # type: ignore
 
 
 class Bot(BotBase, discord.Client):
