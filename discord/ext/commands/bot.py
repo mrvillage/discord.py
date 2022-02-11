@@ -1249,7 +1249,7 @@ class BotBase(GroupMixin):
                     invoked_with = data["name"]  # type: ignore
                     command = command.all_commands[invoked_with]  # type: ignore
                     data = data["options"][0]  # type: ignore
-            except KeyError:
+            except (KeyError, IndexError):
                 pass
             if isinstance(command, GroupMixin):
                 invoked_parents.append(invoked_with)
@@ -1359,20 +1359,26 @@ class BotBase(GroupMixin):
                     if type_ is CommandType.default:
                         continue
                     if type_ is CommandType.chat_input:
-                        command_data.append({
-                            "name": command.name,
-                            "description": command.brief or "\u200b",
-                            "options": options,
-                            "type": type_.value,
-                        })
+                        command_data.append(
+                            {
+                                "name": command.name,
+                                "description": command.brief or "\u200b",
+                                "options": options,
+                                "type": type_.value,
+                            }
+                        )
                     elif type_ is CommandType.user or type_ is CommandType.message:
                         command_data.append({"name": command.name, "type": type_.value})
                     else:
                         continue
         if self.debug:
-            await self.http.bulk_upsert_guild_commands(self.application_id, self.debug_guild_id, command_data)
+            await self.http.bulk_upsert_guild_commands(
+                self.application_id, self.debug_guild_id, command_data
+            )
         else:
-            await self.http.bulk_upsert_global_commands(self.application_id, command_data)
+            await self.http.bulk_upsert_global_commands(
+                self.application_id, command_data
+            )
         # if self.debug:
         #     raw_application_commands = await self.http.get_guild_commands(self.application_id, 654109011473596417)  # type: ignore
         # else:
