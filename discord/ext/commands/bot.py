@@ -1362,7 +1362,7 @@ class BotBase(GroupMixin):
                         command_data.append(
                             {
                                 "name": command.name,
-                                "description": command.brief or "\u200b",
+                                "description": command.brief or " ",
                                 "options": options,
                                 "type": type_.value,
                             }
