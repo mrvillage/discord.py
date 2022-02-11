@@ -272,7 +272,9 @@ def _convert_options(
                     {
                         "type": type_[0],  # type: ignore
                         "name": name,
-                        "description": command.descriptions.get(name, "\u200b"),
+                        "description": command.descriptions.get(
+                            name, "No description provided"
+                        ),
                         "required": True,
                         "choices": type_[1],  # type: ignore
                     }
@@ -282,7 +284,9 @@ def _convert_options(
                     {
                         "type": type_,
                         "name": name,
-                        "description": command.descriptions.get(name, "\u200b"),
+                        "description": command.descriptions.get(
+                            name, "No description provided"
+                        ),
                         "required": True,
                     }
                 )
@@ -291,7 +295,9 @@ def _convert_options(
                 {
                     "type": type_[0],  # type: ignore
                     "name": name,
-                    "description": command.descriptions.get(name, "\u200b"),
+                    "description": command.descriptions.get(
+                        name, "No description provided"
+                    ),
                     "choices": type_[1],  # type: ignore
                 }
             )
@@ -300,7 +306,9 @@ def _convert_options(
                 {
                     "type": type_,
                     "name": name,
-                    "description": command.descriptions.get(name, "\u200b"),
+                    "description": command.descriptions.get(
+                        name, "No description provided"
+                    ),
                 }
             )
     return options
