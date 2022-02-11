@@ -229,7 +229,7 @@ def _convert_options(
                         {
                             "type": updated_group,
                             "name": com.name,  # type: ignore
-                            "description": com.brief or "\u200b",  # type: ignore
+                            "description": com.brief or " ",  # type: ignore
                             "options": opt,
                         }
                     )
@@ -238,7 +238,7 @@ def _convert_options(
                         {
                             "type": updated_group,
                             "name": com.name,  # type: ignore
-                            "description": com.brief or "\u200b",  # type: ignore
+                            "description": com.brief or " ",  # type: ignore
                         }
                     )
         return options
@@ -1362,7 +1362,7 @@ class BotBase(GroupMixin):
                         command_data.append(
                             {
                                 "name": command.name,
-                                "description": command.brief or "___",
+                                "description": command.brief or " ",
                                 "options": options,
                                 "type": type_.value,
                             }
